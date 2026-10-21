@@ -205,7 +205,15 @@ export const localAuth = {
   },
 
   getMe: async (): Promise<User> => {
-    const user = getStorage<User | null>(CURRENT_USER_KEY, null)
+    let user = getStorage<User | null>(CURRENT_USER_KEY, null)
+    if (!user) {
+      try {
+        const saved = localStorage.getItem('user')
+        if (saved) user = JSON.parse(saved)
+      } catch {
+        // ignore
+      }
+    }
     if (!user) {
       throw new Error('Not authenticated')
     }
