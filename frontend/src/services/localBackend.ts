@@ -14,14 +14,15 @@ import type {
 // LocalStorage Keys
 const USERS_KEY = 'tierosaver_local_users'
 const CURRENT_USER_KEY = 'tierosaver_local_current_user'
-const EXPENSES_KEY = 'tierosaver_local_expenses'
-const BUDGETS_KEY = 'tierosaver_local_budgets'
-const SAVINGS_KEY = 'tierosaver_local_savings'
 
 interface StoredBudget {
   daily_limit: number
   weekly_limit: number
   monthly_limit: number
+}
+
+interface StoredUser extends User {
+  password?: string
 }
 
 // Helpers
@@ -38,212 +39,236 @@ const setStorage = <T>(key: string, value: T): void => {
   localStorage.setItem(key, JSON.stringify(value))
 }
 
-// Initialize default sample data if fresh
-const initSampleData = (userId: number) => {
-  const existingExpenses = getStorage<Expense[]>(EXPENSES_KEY, [])
-  if (existingExpenses.length === 0) {
+// Get user-specific storage keys
+const getUserExpensesKey = (userId: number) => `tierosaver_expenses_user_${userId}`
+const getUserBudgetKey = (userId: number) => `tierosaver_budget_user_${userId}`
+const getUserSavingsKey = (userId: number) => `tierosaver_savings_user_${userId}`
+
+// Resolve the currently authenticated user
+export const getCurrentUser = (): User => {
+  // Check 'user' from AuthContext first
+  try {
+    const saved = localStorage.getItem('user')
+    if (saved) {
+      const parsed = JSON.parse(saved)
+      if (parsed && parsed.id) return parsed
+    }
+  } catch {}
+
+  const localUser = getStorage<User | null>(CURRENT_USER_KEY, null)
+  if (localUser && localUser.id) return localUser
+
+  // Fallback demo user
+  return {
+    id: 1,
+    name: 'Demo User',
+    email: 'demo@tierosaver.com',
+    created_at: new Date().toISOString(),
+  }
+}
+
+// Initialize starter sample data ONLY for User 1 (Demo) so new registered users start fresh
+const initSampleDataForUser = (userId: number, isDemo = false) => {
+  const expKey = getUserExpensesKey(userId)
+  const existingExpenses = getStorage<Expense[]>(expKey, [])
+
+  // Only create dummy transactions for user ID 1 or demo
+  if (isDemo && existingExpenses.length === 0) {
     const today = new Date().toISOString().split('T')[0]
     const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0]
-    const twoDaysAgo = new Date(Date.now() - 172800000).toISOString().split('T')[0]
 
     const samples: Expense[] = [
       {
-        id: 1,
+        id: Date.now() - 1000,
         user_id: userId,
-        title: 'Makan Siang & Es Kopi',
+        title: 'Makan Siang & Minuman',
         amount: 35000,
         category: 'Makanan & Minuman',
         expense_date: today,
-        notes: 'Makan di warung favorit',
+        notes: 'Makan siang favorit',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       },
       {
-        id: 2,
+        id: Date.now() - 2000,
         user_id: userId,
         title: 'Bensin Motor',
         amount: 25000,
         category: 'Transportasi',
         expense_date: today,
-        notes: 'Pertalite full tank',
+        notes: 'Pertalite',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       },
       {
-        id: 3,
+        id: Date.now() - 3000,
         user_id: userId,
-        title: 'Belanja Mingguan',
-        amount: 120000,
+        title: 'Belanja Kebutuhan Harian',
+        amount: 85000,
         category: 'Belanja',
         expense_date: yesterday,
-        notes: 'Bahan masakan & sabun',
+        notes: 'Sabun & cemilan',
         created_at: new Date(Date.now() - 86400000).toISOString(),
         updated_at: new Date(Date.now() - 86400000).toISOString(),
       },
-      {
-        id: 4,
-        user_id: userId,
-        title: 'Langganan Streaming Musik',
-        amount: 55000,
-        category: 'Hiburan',
-        expense_date: twoDaysAgo,
-        notes: 'Paket 1 bulan',
-        created_at: new Date(Date.now() - 172800000).toISOString(),
-        updated_at: new Date(Date.now() - 172800000).toISOString(),
-      },
     ]
-    setStorage(EXPENSES_KEY, samples)
+    setStorage(expKey, samples)
   }
 
-  const existingBudgets = getStorage<Record<number, StoredBudget>>(BUDGETS_KEY, {})
-  if (!existingBudgets[userId]) {
-    existingBudgets[userId] = {
+  // Budgets
+  const budgetKey = getUserBudgetKey(userId)
+  const existingBudget = getStorage<StoredBudget | null>(budgetKey, null)
+  if (!existingBudget) {
+    setStorage(budgetKey, {
       daily_limit: 100000,
       weekly_limit: 600000,
       monthly_limit: 2500000,
-    }
-    setStorage(BUDGETS_KEY, existingBudgets)
+    })
   }
 
-  const existingSavings = getStorage<SavingsGoal[]>(SAVINGS_KEY, [])
-  if (existingSavings.length === 0) {
+  // Savings
+  const savKey = getUserSavingsKey(userId)
+  const existingSavings = getStorage<SavingsGoal[]>(savKey, [])
+  if (isDemo && existingSavings.length === 0) {
     const sampleGoal: SavingsGoal = {
-      id: 1,
+      id: Date.now(),
       user_id: userId,
-      title: 'Dana Darurat & Liburan Akhir Tahun',
-      target_amount: 3000000,
-      current_amount: 1250000,
+      title: 'Target Tabungan Pertama',
+      target_amount: 1000000,
+      current_amount: 250000,
       target_date: '2026-12-31',
-      notes: 'Target tabungan mandiri',
+      notes: 'Contoh tabungan impian',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      progress_percentage: 41.67,
-      remaining_amount: 1750000,
+      progress_percentage: 25,
+      remaining_amount: 750000,
       is_reached: false,
       transactions: [
         {
-          id: 1,
-          savings_goal_id: 1,
-          user_id: userId,
-          type: 'deposit',
-          amount: 1000000,
-          notes: 'Setoran awal',
-          created_at: new Date(Date.now() - 604800000).toISOString(),
-        },
-        {
-          id: 2,
+          id: Date.now(),
           savings_goal_id: 1,
           user_id: userId,
           type: 'deposit',
           amount: 250000,
-          notes: 'Sisa uang saku',
-          created_at: new Date(Date.now() - 86400000).toISOString(),
+          notes: 'Setoran tabungan awal',
+          created_at: new Date().toISOString(),
         },
       ],
     }
-    setStorage(SAVINGS_KEY, [sampleGoal])
+    setStorage(savKey, [sampleGoal])
   }
 }
 
 // -------------------------------------------------------------
-// Auth
+// Auth API
 // -------------------------------------------------------------
 export const localAuth = {
-  login: async (email: string, _password: string): Promise<AuthResponse> => {
-    const users = getStorage<User[]>(USERS_KEY, [])
-    let user = users.find((u) => u.email.toLowerCase() === email.toLowerCase())
+  login: async (email: string, password?: string): Promise<AuthResponse> => {
+    const users = getStorage<StoredUser[]>(USERS_KEY, [])
+    const normalizedEmail = email.trim().toLowerCase()
+    let user = users.find((u) => u.email.toLowerCase() === normalizedEmail)
 
     if (!user) {
-      // Auto-register convenience for seamless testing
-      const name = email.split('@')[0] || 'User'
+      // Auto-register seamless experience if user enters new credentials
+      const name = normalizedEmail.split('@')[0] || 'User'
       user = {
         id: users.length + 1,
         name: name.charAt(0).toUpperCase() + name.slice(1),
-        email,
+        email: normalizedEmail,
+        password: password || '',
         created_at: new Date().toISOString(),
       }
       users.push(user)
       setStorage(USERS_KEY, users)
     }
 
-    setStorage(CURRENT_USER_KEY, user)
-    initSampleData(user.id)
+    const cleanUser: User = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      created_at: user.created_at,
+    }
+
+    setStorage(CURRENT_USER_KEY, cleanUser)
+    localStorage.setItem('user', JSON.stringify(cleanUser))
+    localStorage.setItem('token', `local_jwt_token_${cleanUser.id}_${Date.now()}`)
+
+    // Init sample data only if it is user #1
+    initSampleDataForUser(cleanUser.id, cleanUser.id === 1)
 
     return {
-      token: `local_jwt_token_${user.id}_${Date.now()}`,
-      user,
+      token: `local_jwt_token_${cleanUser.id}_${Date.now()}`,
+      user: cleanUser,
     }
   },
 
-  register: async (name: string, email: string, _password: string): Promise<AuthResponse> => {
-    const users = getStorage<User[]>(USERS_KEY, [])
-    const existing = users.find((u) => u.email.toLowerCase() === email.toLowerCase())
-    if (existing) {
-      setStorage(CURRENT_USER_KEY, existing)
-      initSampleData(existing.id)
-      return {
-        token: `local_jwt_token_${existing.id}_${Date.now()}`,
-        user: existing,
+  register: async (name: string, email: string, password?: string): Promise<AuthResponse> => {
+    const users = getStorage<StoredUser[]>(USERS_KEY, [])
+    const normalizedEmail = email.trim().toLowerCase()
+    let user = users.find((u) => u.email.toLowerCase() === normalizedEmail)
+
+    if (user) {
+      // Update name if changed
+      if (name) user.name = name
+      setStorage(USERS_KEY, users)
+    } else {
+      user = {
+        id: users.length + 1,
+        name: name.trim() || 'User',
+        email: normalizedEmail,
+        password: password || '',
+        created_at: new Date().toISOString(),
       }
+      users.push(user)
+      setStorage(USERS_KEY, users)
     }
 
-    const newUser: User = {
-      id: users.length + 1,
-      name,
-      email,
-      created_at: new Date().toISOString(),
+    const cleanUser: User = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      created_at: user.created_at,
     }
-    users.push(newUser)
-    setStorage(USERS_KEY, users)
-    setStorage(CURRENT_USER_KEY, newUser)
-    initSampleData(newUser.id)
+
+    setStorage(CURRENT_USER_KEY, cleanUser)
+    localStorage.setItem('user', JSON.stringify(cleanUser))
+    localStorage.setItem('token', `local_jwt_token_${cleanUser.id}_${Date.now()}`)
+
+    // Clean start for new registered users (no dummy expenses)
+    initSampleDataForUser(cleanUser.id, false)
 
     return {
-      token: `local_jwt_token_${newUser.id}_${Date.now()}`,
-      user: newUser,
+      token: `local_jwt_token_${cleanUser.id}_${Date.now()}`,
+      user: cleanUser,
     }
   },
 
   getMe: async (): Promise<User> => {
-    let user = getStorage<User | null>(CURRENT_USER_KEY, null)
-    if (!user) {
-      try {
-        const saved = localStorage.getItem('user')
-        if (saved) user = JSON.parse(saved)
-      } catch {
-        // ignore
-      }
-    }
-    if (!user) {
-      throw new Error('Not authenticated')
-    }
-    return user
+    return getCurrentUser()
   },
 }
 
 // -------------------------------------------------------------
-// Expenses
+// Expenses API (Strictly Scoped by User ID)
 // -------------------------------------------------------------
 export const localExpenses = {
   getOverview: async (date?: string, month?: string): Promise<ExpenseOverviewResponse> => {
-    const user = getStorage<User | null>(CURRENT_USER_KEY, null)
-    const userId = user?.id || 1
-    const allExpenses = getStorage<Expense[]>(EXPENSES_KEY, []).filter(
-      (e) => e.user_id === userId
-    )
+    const user = getCurrentUser()
+    const expKey = getUserExpensesKey(user.id)
+    const userExpenses = getStorage<Expense[]>(expKey, [])
 
     const todayStr = new Date().toISOString().split('T')[0]
     const targetDate = date || todayStr
 
     // Calculate Today Sum
-    const todaySum = allExpenses
+    const todaySum = userExpenses
       .filter((e) => e.expense_date === todayStr)
       .reduce((sum, e) => sum + e.amount, 0)
 
     // Calculate Week Sum (last 7 days)
     const now = new Date()
     const weekAgo = new Date(now.getTime() - 7 * 86400000)
-    const weekSum = allExpenses
+    const weekSum = userExpenses
       .filter((e) => {
         const d = new Date(e.expense_date)
         return d >= weekAgo && d <= now
@@ -252,17 +277,17 @@ export const localExpenses = {
 
     // Calculate Month Sum
     const targetMonth = month || todayStr.substring(0, 7) // YYYY-MM
-    const monthExpenses = allExpenses.filter((e) => e.expense_date.startsWith(targetMonth))
+    const monthExpenses = userExpenses.filter((e) => e.expense_date.startsWith(targetMonth))
     const monthSum = monthExpenses.reduce((sum, e) => sum + e.amount, 0)
 
     // Selected Date Sum
-    const selectedDateSum = allExpenses
+    const selectedDateSum = userExpenses
       .filter((e) => e.expense_date === targetDate)
       .reduce((sum, e) => sum + e.amount, 0)
 
     // Daily breakdown for charts (group by date)
     const groupMap = new Map<string, Expense[]>()
-    allExpenses.forEach((exp) => {
+    userExpenses.forEach((exp) => {
       const arr = groupMap.get(exp.expense_date) || []
       arr.push(exp)
       groupMap.set(exp.expense_date, arr)
@@ -289,7 +314,7 @@ export const localExpenses = {
       today_sum: todaySum,
       week_sum: weekSum,
       month_sum: monthSum,
-      expenses: allExpenses.sort((a, b) => b.expense_date.localeCompare(a.expense_date)),
+      expenses: [...userExpenses].sort((a, b) => b.expense_date.localeCompare(a.expense_date)),
       daily_breakdown,
       category_breakdown,
     }
@@ -302,13 +327,13 @@ export const localExpenses = {
     expense_date: string
     notes?: string
   }): Promise<{ message: string; expense: Expense; date_total: number }> => {
-    const user = getStorage<User | null>(CURRENT_USER_KEY, null)
-    const userId = user?.id || 1
-    const expenses = getStorage<Expense[]>(EXPENSES_KEY, [])
+    const user = getCurrentUser()
+    const expKey = getUserExpensesKey(user.id)
+    const expenses = getStorage<Expense[]>(expKey, [])
 
     const newExp: Expense = {
       id: Date.now(),
-      user_id: userId,
+      user_id: user.id,
       title: data.title,
       amount: data.amount,
       category: data.category,
@@ -319,10 +344,10 @@ export const localExpenses = {
     }
 
     expenses.unshift(newExp)
-    setStorage(EXPENSES_KEY, expenses)
+    setStorage(expKey, expenses)
 
     const dateTotal = expenses
-      .filter((e) => e.user_id === userId && e.expense_date === data.expense_date)
+      .filter((e) => e.expense_date === data.expense_date)
       .reduce((sum, e) => sum + e.amount, 0)
 
     return {
@@ -342,7 +367,9 @@ export const localExpenses = {
       notes?: string
     }
   ): Promise<Expense> => {
-    const expenses = getStorage<Expense[]>(EXPENSES_KEY, [])
+    const user = getCurrentUser()
+    const expKey = getUserExpensesKey(user.id)
+    const expenses = getStorage<Expense[]>(expKey, [])
     const index = expenses.findIndex((e) => e.id === id)
     if (index === -1) throw new Error('Expense not found')
 
@@ -352,31 +379,32 @@ export const localExpenses = {
       updated_at: new Date().toISOString(),
     }
     expenses[index] = updated
-    setStorage(EXPENSES_KEY, expenses)
+    setStorage(expKey, expenses)
     return updated
   },
 
   deleteExpense: async (id: number): Promise<{ message: string }> => {
-    let expenses = getStorage<Expense[]>(EXPENSES_KEY, [])
+    const user = getCurrentUser()
+    const expKey = getUserExpensesKey(user.id)
+    let expenses = getStorage<Expense[]>(expKey, [])
     expenses = expenses.filter((e) => e.id !== id)
-    setStorage(EXPENSES_KEY, expenses)
+    setStorage(expKey, expenses)
     return { message: 'Expense deleted successfully' }
   },
 }
 
 // -------------------------------------------------------------
-// Budgets
+// Budgets API (Strictly Scoped by User ID)
 // -------------------------------------------------------------
 export const localBudgets = {
   getOverview: async (): Promise<BudgetOverviewResponse> => {
-    const user = getStorage<User | null>(CURRENT_USER_KEY, null)
-    const userId = user?.id || 1
-    const budgetsMap = getStorage<Record<number, StoredBudget>>(BUDGETS_KEY, {})
-    const budget = budgetsMap[userId] || {
+    const user = getCurrentUser()
+    const budgetKey = getUserBudgetKey(user.id)
+    const budget = getStorage<StoredBudget>(budgetKey, {
       daily_limit: 100000,
       weekly_limit: 600000,
       monthly_limit: 2500000,
-    }
+    })
 
     const expensesOverview = await localExpenses.getOverview()
 
@@ -426,29 +454,26 @@ export const localBudgets = {
     weekly_limit: number
     monthly_limit: number
   }): Promise<BudgetOverviewResponse> => {
-    const user = getStorage<User | null>(CURRENT_USER_KEY, null)
-    const userId = user?.id || 1
-    const budgetsMap = getStorage<Record<number, StoredBudget>>(BUDGETS_KEY, {})
-    budgetsMap[userId] = {
+    const user = getCurrentUser()
+    const budgetKey = getUserBudgetKey(user.id)
+    const newBudget: StoredBudget = {
       daily_limit: data.daily_limit,
       weekly_limit: data.weekly_limit,
       monthly_limit: data.monthly_limit,
     }
-    setStorage(BUDGETS_KEY, budgetsMap)
+    setStorage(budgetKey, newBudget)
     return localBudgets.getOverview()
   },
 }
 
 // -------------------------------------------------------------
-// Savings
+// Savings API (Strictly Scoped by User ID)
 // -------------------------------------------------------------
 export const localSavings = {
   getGoals: async (): Promise<SavingsOverviewResponse> => {
-    const user = getStorage<User | null>(CURRENT_USER_KEY, null)
-    const userId = user?.id || 1
-    const goals = getStorage<SavingsGoal[]>(SAVINGS_KEY, []).filter(
-      (g) => g.user_id === userId
-    )
+    const user = getCurrentUser()
+    const savKey = getUserSavingsKey(user.id)
+    const goals = getStorage<SavingsGoal[]>(savKey, [])
 
     const totalSaved = goals.reduce((s, g) => s + g.current_amount, 0)
     const totalTarget = goals.reduce((s, g) => s + g.target_amount, 0)
@@ -467,13 +492,13 @@ export const localSavings = {
     target_date?: string
     notes?: string
   }): Promise<SavingsGoal> => {
-    const user = getStorage<User | null>(CURRENT_USER_KEY, null)
-    const userId = user?.id || 1
-    const goals = getStorage<SavingsGoal[]>(SAVINGS_KEY, [])
+    const user = getCurrentUser()
+    const savKey = getUserSavingsKey(user.id)
+    const goals = getStorage<SavingsGoal[]>(savKey, [])
 
     const newGoal: SavingsGoal = {
       id: Date.now(),
-      user_id: userId,
+      user_id: user.id,
       title: data.title,
       target_amount: data.target_amount,
       current_amount: 0,
@@ -488,7 +513,7 @@ export const localSavings = {
     }
 
     goals.unshift(newGoal)
-    setStorage(SAVINGS_KEY, goals)
+    setStorage(savKey, goals)
     return newGoal
   },
 
@@ -501,7 +526,9 @@ export const localSavings = {
       notes?: string
     }
   ): Promise<SavingsGoal> => {
-    const goals = getStorage<SavingsGoal[]>(SAVINGS_KEY, [])
+    const user = getCurrentUser()
+    const savKey = getUserSavingsKey(user.id)
+    const goals = getStorage<SavingsGoal[]>(savKey, [])
     const index = goals.findIndex((g) => g.id === id)
     if (index === -1) throw new Error('Goal not found')
 
@@ -523,14 +550,16 @@ export const localSavings = {
     }
 
     goals[index] = updated
-    setStorage(SAVINGS_KEY, goals)
+    setStorage(savKey, goals)
     return updated
   },
 
   deleteGoal: async (id: number): Promise<{ message: string }> => {
-    let goals = getStorage<SavingsGoal[]>(SAVINGS_KEY, [])
+    const user = getCurrentUser()
+    const savKey = getUserSavingsKey(user.id)
+    let goals = getStorage<SavingsGoal[]>(savKey, [])
     goals = goals.filter((g) => g.id !== id)
-    setStorage(SAVINGS_KEY, goals)
+    setStorage(savKey, goals)
     return { message: 'Savings goal deleted successfully' }
   },
 
@@ -542,7 +571,9 @@ export const localSavings = {
       notes?: string
     }
   ): Promise<{ message: string; goal: SavingsGoal }> => {
-    const goals = getStorage<SavingsGoal[]>(SAVINGS_KEY, [])
+    const user = getCurrentUser()
+    const savKey = getUserSavingsKey(user.id)
+    const goals = getStorage<SavingsGoal[]>(savKey, [])
     const index = goals.findIndex((g) => g.id === id)
     if (index === -1) throw new Error('Goal not found')
 
@@ -580,7 +611,7 @@ export const localSavings = {
     }
 
     goals[index] = updatedGoal
-    setStorage(SAVINGS_KEY, goals)
+    setStorage(savKey, goals)
     return {
       message: 'Transaction recorded successfully',
       goal: updatedGoal,

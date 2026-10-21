@@ -70,6 +70,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null)
     localStorage.removeItem('token')
     localStorage.removeItem('user')
+    localStorage.removeItem('tierosaver_local_current_user')
   }
 
   return (
