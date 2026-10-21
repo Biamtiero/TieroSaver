@@ -46,7 +46,11 @@ func InitDB(cfg *config.Config) *gorm.DB {
 
 	if DB == nil {
 		var sqliteDB *gorm.DB
-		sqliteDB, err = gorm.Open(sqlite.Open("daily_tracker.db"), &gorm.Config{
+		dbFilePath := cfg.DBFile
+		if dbFilePath == "" {
+			dbFilePath = "daily_tracker.db"
+		}
+		sqliteDB, err = gorm.Open(sqlite.Open(dbFilePath), &gorm.Config{
 			Logger: logger.Default.LogMode(logger.Warn),
 		})
 		if err != nil {
@@ -54,10 +58,10 @@ func InitDB(cfg *config.Config) *gorm.DB {
 		}
 		DB = sqliteDB
 		if cfg.DBType == "sqlite" {
-			log.Println("📦 Successfully connected to SQLite database (daily_tracker.db)")
+			log.Printf("📦 Successfully connected to SQLite database (%s)\n", dbFilePath)
 			ActiveDBType = "SQLite"
 		} else {
-			log.Println(" Successfully initialized local database (daily_tracker.db)")
+			log.Printf(" Successfully initialized local database (%s)\n", dbFilePath)
 			ActiveDBType = "SQLite (Local Fallback)"
 		}
 	}

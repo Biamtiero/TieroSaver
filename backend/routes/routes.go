@@ -1,6 +1,8 @@
 package routes
 
 import (
+	"os"
+	"strings"
 	"time"
 
 	"daily-spent-tracker-backend/config"
@@ -84,6 +86,19 @@ func SetupRouter(cfg *config.Config) *gin.Engine {
 				savings.POST("/:id/transaction", savingsCtrl.AddTransaction)
 			}
 		}
+	}
+
+	// Serve static frontend if dist directory exists
+	if _, err := os.Stat("./dist"); err == nil {
+		r.Static("/assets", "./dist/assets")
+		r.StaticFile("/favicon.ico", "./dist/favicon.ico")
+		r.NoRoute(func(c *gin.Context) {
+			if strings.HasPrefix(c.Request.URL.Path, "/api") {
+				c.JSON(404, gin.H{"error": "Endpoint not found"})
+				return
+			}
+			c.File("./dist/index.html")
+		})
 	}
 
 	return r

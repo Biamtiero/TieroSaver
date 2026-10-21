@@ -10,6 +10,7 @@ import (
 type Config struct {
 	Port          string
 	DBType        string // "postgres" or "sqlite"
+	DBFile        string // sqlite database file path
 	DBHost        string
 	DBPort        string
 	DBUser        string
@@ -27,6 +28,7 @@ func LoadConfig() *Config {
 
 	port := getEnv("PORT", "8080")
 	dbType := getEnv("DB_TYPE", "postgres")
+	dbFile := getEnv("DB_FILE", "daily_tracker.db")
 	dbHost := getEnv("DB_HOST", "localhost")
 	dbPort := getEnv("DB_PORT", "5432")
 	dbUser := getEnv("DB_USER", "postgres")
@@ -39,6 +41,7 @@ func LoadConfig() *Config {
 	return &Config{
 		Port:          port,
 		DBType:        dbType,
+		DBFile:        dbFile,
 		DBHost:        dbHost,
 		DBPort:        dbPort,
 		DBUser:        dbUser,

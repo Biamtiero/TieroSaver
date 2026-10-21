@@ -1,3 +1,12 @@
+---
+title: TieroSaver
+emoji: 🪙
+colorFrom: green
+colorTo: blue
+sdk: docker
+app_port: 7860
+---
+
 # 🪙 TieroSaver — Smart Personal Finance & Budget Tracker
 
 **TieroSaver** adalah aplikasi web manajemen keuangan pribadi modern yang dirancang untuk membantu generasi muda (*Gen Z* dan profesional muda) mengendalikan kebiasaan belanja, mematuhi batas anggaran (*budget limits*), serta mencapai target tabungan secara terukur dan disiplin.
