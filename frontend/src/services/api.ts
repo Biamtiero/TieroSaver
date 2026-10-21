@@ -97,6 +97,41 @@ export const authApi = {
       throw err
     }
   },
+  updateProfile: async (data: {
+    name?: string
+    email?: string
+    avatar_url?: string
+    phone?: string
+    currency?: string
+    bio?: string
+  }): Promise<User> => {
+    if (isStandalone) return await localAuth.updateProfile(data)
+    try {
+      const res = await API.put<User>('/auth/profile', data)
+      if (res.data && res.data.id) return res.data
+      return await localAuth.updateProfile(data)
+    } catch (err: any) {
+      if (shouldFallback(err)) return await localAuth.updateProfile(data)
+      throw err
+    }
+  },
+  changePassword: async (oldPassword: string, newPassword: string): Promise<{ message: string }> => {
+    if (isStandalone) return await localAuth.changePassword(oldPassword, newPassword)
+    try {
+      const res = await API.put<{ message: string }>('/auth/password', {
+        old_password: oldPassword,
+        new_password: newPassword,
+      })
+      if (res.data && res.data.message) return res.data
+      return await localAuth.changePassword(oldPassword, newPassword)
+    } catch (err: any) {
+      if (shouldFallback(err)) return await localAuth.changePassword(oldPassword, newPassword)
+      throw err
+    }
+  },
+  resetData: async (): Promise<{ message: string }> => {
+    return await localAuth.resetData()
+  },
 }
 
 export const expensesApi = {

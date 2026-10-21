@@ -57,8 +57,10 @@ func SetupRouter(cfg *config.Config) *gin.Engine {
 		protected := api.Group("")
 		protected.Use(middleware.AuthMiddleware(cfg.JWTSecret))
 		{
-			// Current user
+			// Current user & profile management
 			protected.GET("/auth/me", authCtrl.Me)
+			protected.PUT("/auth/profile", authCtrl.UpdateProfile)
+			protected.PUT("/auth/password", authCtrl.ChangePassword)
 
 			// Expenses
 			expenses := protected.Group("/expenses")

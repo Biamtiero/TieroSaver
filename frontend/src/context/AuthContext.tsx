@@ -10,6 +10,7 @@ interface AuthContextType {
   login: (token: string, user: User) => void
   logout: () => void
   refreshUser: () => Promise<void>
+  updateUser: (updatedUser: User) => void
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -65,6 +66,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem('user', JSON.stringify(newUser))
   }
 
+  const updateUser = (updatedUser: User) => {
+    setUser(updatedUser)
+    localStorage.setItem('user', JSON.stringify(updatedUser))
+    localStorage.setItem('tierosaver_local_current_user', JSON.stringify(updatedUser))
+  }
+
   const logout = () => {
     setToken(null)
     setUser(null)
@@ -83,6 +90,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login,
         logout,
         refreshUser,
+        updateUser,
       }}
     >
       {children}

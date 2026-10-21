@@ -246,6 +246,96 @@ export const localAuth = {
   getMe: async (): Promise<User> => {
     return getCurrentUser()
   },
+
+  updateProfile: async (data: {
+    name?: string
+    email?: string
+    avatar_url?: string
+    phone?: string
+    currency?: string
+    bio?: string
+  }): Promise<User> => {
+    const currentUser = getCurrentUser()
+    const users = getStorage<StoredUser[]>(USERS_KEY, [])
+    const index = users.findIndex((u) => u.id === currentUser.id)
+
+    if (data.email && data.email.trim().toLowerCase() !== currentUser.email.toLowerCase()) {
+      const emailTaken = users.some(
+        (u) => u.id !== currentUser.id && u.email.toLowerCase() === data.email!.trim().toLowerCase()
+      )
+      if (emailTaken) {
+        throw new Error('Email tersebut sudah digunakan oleh akun lain')
+      }
+    }
+
+    const updatedUser: StoredUser = {
+      ...(index !== -1 ? users[index] : currentUser),
+      ...data,
+      id: currentUser.id,
+      email: data.email ? data.email.trim().toLowerCase() : currentUser.email,
+      name: data.name ? data.name.trim() : currentUser.name,
+      avatar_url: data.avatar_url !== undefined ? data.avatar_url : currentUser.avatar_url,
+      phone: data.phone !== undefined ? data.phone.trim() : currentUser.phone,
+      currency: data.currency || currentUser.currency || 'IDR',
+      bio: data.bio !== undefined ? data.bio : currentUser.bio,
+      created_at: currentUser.created_at,
+    }
+
+    if (index !== -1) {
+      users[index] = updatedUser
+    } else {
+      users.push(updatedUser)
+    }
+    setStorage(USERS_KEY, users)
+
+    const cleanUser: User = {
+      id: updatedUser.id,
+      name: updatedUser.name,
+      email: updatedUser.email,
+      avatar_url: updatedUser.avatar_url,
+      phone: updatedUser.phone,
+      currency: updatedUser.currency,
+      bio: updatedUser.bio,
+      created_at: updatedUser.created_at,
+    }
+
+    setStorage(CURRENT_USER_KEY, cleanUser)
+    localStorage.setItem('user', JSON.stringify(cleanUser))
+    return cleanUser
+  },
+
+  changePassword: async (oldPassword: string, newPassword: string): Promise<{ message: string }> => {
+    const currentUser = getCurrentUser()
+    const users = getStorage<StoredUser[]>(USERS_KEY, [])
+    const index = users.findIndex((u) => u.id === currentUser.id)
+    if (index === -1) throw new Error('Akun tidak ditemukan')
+
+    const storedUser = users[index]
+    if (storedUser.password && storedUser.password !== oldPassword) {
+      throw new Error('Kata sandi lama tidak sesuai')
+    }
+
+    if (newPassword.length < 6) {
+      throw new Error('Kata sandi baru minimal 6 karakter')
+    }
+
+    storedUser.password = newPassword
+    users[index] = storedUser
+    setStorage(USERS_KEY, users)
+    return { message: 'Kata sandi berhasil diperbarui' }
+  },
+
+  resetData: async (): Promise<{ message: string }> => {
+    const currentUser = getCurrentUser()
+    setStorage(getUserExpensesKey(currentUser.id), [])
+    setStorage(getUserSavingsKey(currentUser.id), [])
+    setStorage(getUserBudgetKey(currentUser.id), {
+      daily_limit: 100000,
+      weekly_limit: 600000,
+      monthly_limit: 2500000,
+    })
+    return { message: 'Semua data transaksi & anggaran telah berhasil direset' }
+  },
 }
 
 // -------------------------------------------------------------

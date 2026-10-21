@@ -8,6 +8,7 @@ import { Dashboard } from "./components/dashboard/Dashboard";
 import { ExpenseTracker } from "./components/expenses/ExpenseTracker";
 import { BudgetLimitManager } from "./components/limits/BudgetLimitManager";
 import { SavingsTracker } from "./components/savings/SavingsTracker";
+import { ProfileModal } from "./components/profile/ProfileModal";
 import { expensesApi, budgetsApi, savingsApi } from "./services/api";
 import type {
   ExpenseOverviewResponse,
@@ -40,6 +41,7 @@ export const App: React.FC = () => {
   const [savingsData, setSavingsData] =
     useState<SavingsOverviewResponse | null>(null);
   const [isDataLoading, setIsDataLoading] = useState<boolean>(false);
+  const [showProfileModal, setShowProfileModal] = useState<boolean>(false);
 
   // Quick Action Modals
   const [showQuickExpenseModal, setShowQuickExpenseModal] =
@@ -122,7 +124,11 @@ export const App: React.FC = () => {
       {/* Ambient background glow */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-96 bg-gradient-to-b from-indigo-50/60 dark:from-indigo-950/20 via-slate-50/20 dark:via-slate-950/20 to-transparent pointer-events-none -z-0" />
 
-      <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
+      <Navbar
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        onOpenProfile={() => setShowProfileModal(true)}
+      />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-28 md:pb-8 relative z-10">
         {activeTab === "dashboard" && (
@@ -313,6 +319,13 @@ export const App: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Profile & Account Settings Modal */}
+      <ProfileModal
+        isOpen={showProfileModal}
+        onClose={() => setShowProfileModal(false)}
+        onDataReset={loadAllData}
+      />
     </div>
   );
 };

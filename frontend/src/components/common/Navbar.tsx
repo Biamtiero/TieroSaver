@@ -15,9 +15,10 @@ import {
 interface NavbarProps {
   activeTab: 'dashboard' | 'expenses' | 'limits' | 'savings'
   setActiveTab: (tab: 'dashboard' | 'expenses' | 'limits' | 'savings') => void
+  onOpenProfile: () => void
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
+export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, onOpenProfile }) => {
   const { user, logout } = useAuth()
   const { theme, toggleTheme } = useTheme()
 
@@ -92,17 +93,30 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
               )}
             </button>
 
-            {/* User Profile Pill */}
-            <div className="flex items-center gap-2.5 py-1 px-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200/70 dark:border-slate-700/70">
-              <div className="w-7 h-7 rounded-lg bg-indigo-600 dark:bg-indigo-500 text-white flex items-center justify-center text-xs font-semibold shadow-xs">
-                {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
+            {/* User Profile Pill Button */}
+            <button
+              type="button"
+              onClick={onOpenProfile}
+              title="Buka Pengaturan Profil & Akun"
+              className="flex items-center gap-2 sm:gap-2.5 py-1 px-2 sm:px-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700/80 border border-slate-200/70 dark:border-slate-700/70 transition cursor-pointer group"
+            >
+              <div className="w-7 h-7 rounded-lg bg-indigo-600 dark:bg-indigo-500 text-white flex items-center justify-center text-xs font-semibold shadow-xs overflow-hidden shrink-0">
+                {user?.avatar_url ? (
+                  user.avatar_url.length <= 4 ? (
+                    <span className="text-sm select-none">{user.avatar_url}</span>
+                  ) : (
+                    <img src={user.avatar_url} alt={user.name} className="w-full h-full object-cover" />
+                  )
+                ) : (
+                  user?.name ? user.name.charAt(0).toUpperCase() : 'U'
+                )}
               </div>
               <div className="text-left text-xs hidden sm:block">
-                <p className="font-semibold text-slate-800 dark:text-slate-200 leading-tight truncate max-w-[120px]">
+                <p className="font-semibold text-slate-800 dark:text-slate-200 leading-tight truncate max-w-[120px] group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition">
                   {user?.name}
                 </p>
               </div>
-            </div>
+            </button>
 
             {/* Logout Button */}
             <button
