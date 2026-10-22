@@ -36,7 +36,11 @@ export const AuthScreen: React.FC = () => {
         login(data.token, data.user)
       }
     } catch (err: any) {
-      const errMsg = err.response?.data?.error || 'Terjadi kesalahan saat masuk atau mendaftar'
+      const errMsg =
+        err.message ||
+        err.response?.data?.error_description ||
+        err.response?.data?.error ||
+        'Terjadi kesalahan saat masuk atau mendaftar'
       setError(errMsg)
     } finally {
       setLoading(false)

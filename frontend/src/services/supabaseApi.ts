@@ -64,7 +64,10 @@ export const supabaseAuth = {
 
     if (error) {
       if (error.message.includes('Invalid login credentials')) {
-        throw new Error('Email atau kata sandi tidak cocok')
+        throw new Error('Email belum terdaftar atau kata sandi tidak cocok. Silakan klik tab "Daftar Akun" terlebih dahulu jika belum pernah mendaftar di database baru.')
+      }
+      if (error.message.includes('Email not confirmed')) {
+        throw new Error('Email belum dikonfirmasi. Silakan matikan "Confirm email" di menu Authentication > Providers > Email pada Supabase Anda agar bisa login langsung tanpa verifikasi email.')
       }
       throw new Error(error.message)
     }
