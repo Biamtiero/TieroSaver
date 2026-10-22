@@ -13,7 +13,7 @@ app_port: 7860
 
 ---
 
-## ✨ Fitur-Fitur Utama
+## Fitur-Fitur Utama
 
 1. **Autentikasi Multi-User**:
    - Register akun & Login aman berbasis **JWT Token** dan enkripsi sandi **Bcrypt**.
@@ -44,7 +44,7 @@ app_port: 7860
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 - **Frontend**:
   - React 18 & TypeScript
@@ -64,7 +64,7 @@ app_port: 7860
 
 ---
 
-## 🚀 Panduan Menjalankan Project
+## Panduan Menjalankan Project
 
 ### 1. Prasyarat
 - [Node.js](https://nodejs.org/) (versi 18+) & [pnpm](https://pnpm.io/)
@@ -88,7 +88,7 @@ pnpm dev
 
 ---
 
-## 📂 Struktur Repositori
+## Struktur Repositori
 
 ```text
 tierosaver/
