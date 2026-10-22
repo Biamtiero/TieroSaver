@@ -1,9 +1,14 @@
 -- ==============================================================
--- 🪙 TIEROSAVER - SUPABASE DATABASE INITIALIZATION SCRIPT
+-- 🪙 TIEROSAVER - SUPABASE DATABASE INITIALIZATION SCRIPT (V2)
 -- ==============================================================
--- Jalankan skrip ini di menu SQL Editor pada Dashboard Supabase Anda.
--- Skrip ini akan membuat tabel-tabel dan sistem keamanan Row Level Security (RLS)
--- sehingga setiap pengguna hanya bisa mengakses datanya sendiri.
+-- Petunjuk:
+-- 1. Hapus semua teks lama di SQL Editor Supabase.
+-- 2. Tempelkan seluruh kode ini dari baris paling atas sampai bawah.
+-- 3. PENTING: Pastikan TIDAK ADA teks yang ter-blok / ter-sorot mouse.
+-- 4. Klik tombol hijau RUN (atau tekan Ctrl + Enter).
+-- ==============================================================
+
+BEGIN;
 
 -- 1. TABEL PROFILES (Biodata Pengguna Terhubung ke Auth Supabase)
 CREATE TABLE IF NOT EXISTS public.profiles (
@@ -18,32 +23,17 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     updated_at TIMESTAMPTZ DEFAULT now()
 );
 
--- Trigger Otomatis: Saat ada user baru register di Supabase, buatkan profilnya
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS TRIGGER AS $$
-BEGIN
-    INSERT INTO public.profiles (id, name, email, avatar_url)
-    VALUES (
-        new.id,
-        COALESCE(new.raw_user_meta_data->>'name', split_part(new.email, '@', 1)),
-        new.email,
-        COALESCE(new.raw_user_meta_data->>'avatar_url', '')
-    );
+-- 2. TABEL BUDGET_LIMITS (Batas Anggaran)
+CREATE TABLE IF NOT EXISTS public.budget_limits (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
+    daily_limit NUMERIC DEFAULT 100000,
+    weekly_limit NUMERIC DEFAULT 600000,
+    monthly_limit NUMERIC DEFAULT 2500000,
+    updated_at TIMESTAMPTZ DEFAULT now()
+);
 
-    -- Buat batas anggaran awal
-    INSERT INTO public.budget_limits (user_id, daily_limit, weekly_limit, monthly_limit)
-    VALUES (new.id, 100000, 600000, 2500000);
-
-    RETURN new;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
-DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
-CREATE TRIGGER on_auth_user_created
-    AFTER INSERT ON auth.users
-    FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
-
--- 2. TABEL EXPENSES (Pencatatan Pengeluaran)
+-- 3. TABEL EXPENSES (Pencatatan Pengeluaran)
 CREATE TABLE IF NOT EXISTS public.expenses (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -53,16 +43,6 @@ CREATE TABLE IF NOT EXISTS public.expenses (
     expense_date DATE NOT NULL,
     notes TEXT DEFAULT '',
     created_at TIMESTAMPTZ DEFAULT now(),
-    updated_at TIMESTAMPTZ DEFAULT now()
-);
-
--- 3. TABEL BUDGET_LIMITS (Batas Anggaran)
-CREATE TABLE IF NOT EXISTS public.budget_limits (
-    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
-    daily_limit NUMERIC DEFAULT 0,
-    weekly_limit NUMERIC DEFAULT 0,
-    monthly_limit NUMERIC DEFAULT 0,
     updated_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -90,43 +70,70 @@ CREATE TABLE IF NOT EXISTS public.savings_transactions (
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- ==============================================================
--- 🔒 KEAMANAN: ROW LEVEL SECURITY (RLS)
--- Data aman: Pengguna A tidak bisa mengintip / mengubah data Pengguna B
--- ==============================================================
+-- 6. TRIGGER OTOMATIS: Saat user baru mendaftar di Supabase, otomatis buat profile & budget
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO public.profiles (id, name, email, avatar_url)
+    VALUES (
+        new.id,
+        COALESCE(new.raw_user_meta_data->>'name', split_part(new.email, '@', 1)),
+        new.email,
+        COALESCE(new.raw_user_meta_data->>'avatar_url', '')
+    )
+    ON CONFLICT (id) DO UPDATE SET
+        name = EXCLUDED.name,
+        email = EXCLUDED.email;
 
+    INSERT INTO public.budget_limits (user_id, daily_limit, weekly_limit, monthly_limit)
+    VALUES (new.id, 100000, 600000, 2500000)
+    ON CONFLICT (user_id) DO NOTHING;
+
+    RETURN new;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+    AFTER INSERT ON auth.users
+    FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- 7. KEAMANAN: AKTIFKAN ROW LEVEL SECURITY (RLS)
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.expenses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.budget_limits ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.savings_goals ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.savings_transactions ENABLE ROW LEVEL SECURITY;
 
--- Policies for Profiles
+-- 8. POLICIES: Hapus yang lama lalu buat yang baru (Aman dijalankan berkali-kali)
+DROP POLICY IF EXISTS "Users can manage own profile" ON public.profiles;
 CREATE POLICY "Users can manage own profile"
     ON public.profiles FOR ALL
     USING (auth.uid() = id)
     WITH CHECK (auth.uid() = id);
 
--- Policies for Expenses
+DROP POLICY IF EXISTS "Users can manage own expenses" ON public.expenses;
 CREATE POLICY "Users can manage own expenses"
     ON public.expenses FOR ALL
     USING (auth.uid() = user_id)
     WITH CHECK (auth.uid() = user_id);
 
--- Policies for Budget Limits
+DROP POLICY IF EXISTS "Users can manage own budget limits" ON public.budget_limits;
 CREATE POLICY "Users can manage own budget limits"
     ON public.budget_limits FOR ALL
     USING (auth.uid() = user_id)
     WITH CHECK (auth.uid() = user_id);
 
--- Policies for Savings Goals
+DROP POLICY IF EXISTS "Users can manage own savings goals" ON public.savings_goals;
 CREATE POLICY "Users can manage own savings goals"
     ON public.savings_goals FOR ALL
     USING (auth.uid() = user_id)
     WITH CHECK (auth.uid() = user_id);
 
--- Policies for Savings Transactions
+DROP POLICY IF EXISTS "Users can manage own savings transactions" ON public.savings_transactions;
 CREATE POLICY "Users can manage own savings transactions"
     ON public.savings_transactions FOR ALL
     USING (auth.uid() = user_id)
     WITH CHECK (auth.uid() = user_id);
+
+COMMIT;
