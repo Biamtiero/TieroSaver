@@ -104,7 +104,7 @@ export const SavingsTracker: React.FC<SavingsTrackerProps> = ({
     }
   }
 
-  const handleDeleteGoal = async (id: number) => {
+  const handleDeleteGoal = async (id: number | string) => {
     const isConfirmed = await confirm({
       title: 'Hapus Target Tabungan',
       message: 'Apakah Anda yakin ingin menghapus target tabungan ini beserta seluruh riwayat setorannya?',

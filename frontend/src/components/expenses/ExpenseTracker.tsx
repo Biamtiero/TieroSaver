@@ -159,8 +159,8 @@ export const ExpenseTracker: React.FC<ExpenseTrackerProps> = ({
     })
 
     list.sort((a, b) => {
-      if (sortBy === 'latest') return b.id - a.id
-      if (sortBy === 'oldest') return a.id - b.id
+      if (sortBy === 'latest') return Number(b.id) - Number(a.id)
+      if (sortBy === 'oldest') return Number(a.id) - Number(b.id)
       if (sortBy === 'highest') return b.amount - a.amount
       if (sortBy === 'lowest') return a.amount - b.amount
       return 0
@@ -196,7 +196,7 @@ export const ExpenseTracker: React.FC<ExpenseTrackerProps> = ({
     showToast('Laporan pengeluaran berhasil diunduh dalam format CSV', 'success')
   }
 
-  const handleDeleteExpense = async (id: number) => {
+  const handleDeleteExpense = async (id: number | string) => {
     const isConfirmed = await confirm({
       title: 'Hapus Pengeluaran',
       message: 'Apakah Anda yakin ingin menghapus catatan transaksi pengeluaran ini?',

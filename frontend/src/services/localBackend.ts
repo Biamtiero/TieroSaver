@@ -40,9 +40,9 @@ const setStorage = <T>(key: string, value: T): void => {
 }
 
 // Get user-specific storage keys
-const getUserExpensesKey = (userId: number) => `tierosaver_expenses_user_${userId}`
-const getUserBudgetKey = (userId: number) => `tierosaver_budget_user_${userId}`
-const getUserSavingsKey = (userId: number) => `tierosaver_savings_user_${userId}`
+const getUserExpensesKey = (userId: number | string) => `tierosaver_expenses_user_${userId}`
+const getUserBudgetKey = (userId: number | string) => `tierosaver_budget_user_${userId}`
+const getUserSavingsKey = (userId: number | string) => `tierosaver_savings_user_${userId}`
 
 // Resolve the currently authenticated user
 export const getCurrentUser = (): User => {
@@ -68,7 +68,7 @@ export const getCurrentUser = (): User => {
 }
 
 // Initialize starter sample data ONLY for User 1 (Demo) so new registered users start fresh
-const initSampleDataForUser = (userId: number, isDemo = false) => {
+const initSampleDataForUser = (userId: number | string, isDemo = false) => {
   const expKey = getUserExpensesKey(userId)
   const existingExpenses = getStorage<Expense[]>(expKey, [])
 

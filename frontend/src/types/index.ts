@@ -1,5 +1,5 @@
 export interface User {
-  id: number;
+  id: number | string;
   name: string;
   email: string;
   avatar_url?: string;
@@ -15,8 +15,8 @@ export interface AuthResponse {
 }
 
 export interface Expense {
-  id: number;
-  user_id: number;
+  id: number | string;
+  user_id: number | string;
   title: string;
   amount: number;
   category: string;
@@ -63,9 +63,9 @@ export interface BudgetOverviewResponse {
 }
 
 export interface SavingsTransaction {
-  id: number;
-  savings_goal_id: number;
-  user_id: number;
+  id: number | string;
+  savings_goal_id: number | string;
+  user_id: number | string;
   type: 'deposit' | 'withdraw';
   amount: number;
   notes: string;
@@ -73,8 +73,8 @@ export interface SavingsTransaction {
 }
 
 export interface SavingsGoal {
-  id: number;
-  user_id: number;
+  id: number | string;
+  user_id: number | string;
   title: string;
   target_amount: number;
   current_amount: number;
